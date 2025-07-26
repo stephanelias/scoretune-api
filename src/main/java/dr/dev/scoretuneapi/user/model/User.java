@@ -111,4 +111,62 @@ public class User implements UserDetails {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+
+    public static final class Builder {
+        private UUID id;
+        private String fullName;
+        private String email;
+        private String password;
+        private Date createdAt;
+        private Date updatedAt;
+
+        public Builder() {
+        }
+
+        public static Builder anUser() {
+            return new Builder();
+        }
+
+        public Builder withId(UUID id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder withFullName(String fullName) {
+            this.fullName = fullName;
+            return this;
+        }
+
+        public Builder withEmail(String email) {
+            this.email = email;
+            return this;
+        }
+
+        public Builder withPassword(String password) {
+            this.password = password;
+            return this;
+        }
+
+        public Builder withCreatedAt(Date createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public Builder withUpdatedAt(Date updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public User build() {
+            User user = new User();
+            user.setId(id);
+            user.setFullName(fullName);
+            user.setEmail(email);
+            user.setPassword(password);
+            user.setCreatedAt(createdAt);
+            user.setUpdatedAt(updatedAt);
+            return user;
+        }
+    }
 }
