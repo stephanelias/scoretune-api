@@ -15,7 +15,7 @@ on:
 jobs:
   #Step 1
   feature-build:
-    if: startsWith(github.ref, 'refs/heads/feat/')
+    if: startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/tech/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
