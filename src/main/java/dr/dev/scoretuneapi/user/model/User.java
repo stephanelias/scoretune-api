@@ -2,9 +2,6 @@ package dr.dev.scoretuneapi.user.model;
 
 import jakarta.persistence.*;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,18 +20,12 @@ public class User implements UserDetails {
     private UUID id;
 
     @Column(nullable = false)
-    @NotBlank(message = "Name is required")
-    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
     private String fullName;
 
     @Column(unique = true, length = 100, nullable = false)
-    @Email(message = "Invalid email format")
-    @NotBlank(message = "Email is required")
     private String email;
 
     @Column(nullable = false)
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
 
     @CreationTimestamp

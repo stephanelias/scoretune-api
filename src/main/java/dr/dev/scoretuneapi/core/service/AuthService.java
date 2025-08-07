@@ -2,6 +2,7 @@ package dr.dev.scoretuneapi.core.service;
 
 import dr.dev.scoretuneapi.core.dto.LoginUserDto;
 import dr.dev.scoretuneapi.core.dto.RegisterUserDto;
+import dr.dev.scoretuneapi.core.exception.UserException;
 import dr.dev.scoretuneapi.user.model.User;
 import dr.dev.scoretuneapi.user.persistence.UserDao;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,8 @@ public class AuthService {
     }
 
     public User register(RegisterUserDto registerUserDto) {
+        if (userDao.findByEmail(registerUserDto.email()).isPresent())
+            throw new UserException(UserException.Code.ALREADY_EXISTS,null,"A user with this email already exists");
         User user = new User.Builder()
                 .withEmail(registerUserDto.email())
                 .withPassword(passwordEncoder.encode(registerUserDto.password()))
