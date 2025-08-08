@@ -6,6 +6,7 @@ import dr.dev.scoretuneapi.core.dto.RegisterUserDto;
 import dr.dev.scoretuneapi.core.service.AuthService;
 import dr.dev.scoretuneapi.core.service.JwtService;
 import dr.dev.scoretuneapi.user.model.User;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +28,7 @@ public class AuthApi {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody RegisterUserDto registerUserDto) {
+    public ResponseEntity<User> register(@Valid @RequestBody RegisterUserDto registerUserDto) {
         User registeredUser = authService.register(registerUserDto);
         return ResponseEntity.ok(registeredUser);
     }
