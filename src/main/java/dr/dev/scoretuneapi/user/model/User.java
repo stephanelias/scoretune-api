@@ -5,12 +5,10 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "users")
@@ -28,6 +26,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    private Set<Role> roles ;
+
     @CreationTimestamp
     @Column(updatable = false, name = "created_at")
     private Date createdAt;
@@ -38,7 +40,9 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return this.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .toList();
     }
 
     @Override
@@ -113,12 +117,20 @@ public class User implements UserDetails {
         this.updatedAt = updatedAt;
     }
 
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
 
     public static final class Builder {
         private UUID id;
         private String fullName;
         private String email;
         private String password;
+        private Set<Role> roles ;
         private Date createdAt;
         private Date updatedAt;
 
@@ -149,6 +161,11 @@ public class User implements UserDetails {
             return this;
         }
 
+        public Builder withRoles(Set<Role> roles) {
+            this.roles = roles ;
+            return this ;
+        }
+
         public Builder withCreatedAt(Date createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -165,6 +182,7 @@ public class User implements UserDetails {
             user.setFullName(fullName);
             user.setEmail(email);
             user.setPassword(password);
+            user.setRoles(roles);
             user.setCreatedAt(createdAt);
             user.setUpdatedAt(updatedAt);
             return user;
