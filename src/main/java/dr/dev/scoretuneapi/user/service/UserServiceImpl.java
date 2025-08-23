@@ -1,6 +1,6 @@
 package dr.dev.scoretuneapi.user.service;
 
-import dr.dev.scoretuneapi.user.model.User;
+import dr.dev.scoretuneapi.user.model.dto.UserDto;
 import dr.dev.scoretuneapi.user.persistence.UserDao;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +19,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
-        return userDao.findAll();
+    public List<UserDto> getAllUsers() {
+        return userDao.findAll().stream().map(u -> new UserDto(
+                u.getId(),
+                u.getFullName(),
+                u.getEmail(),
+                u.getRoles(),
+                u.getCreatedAt())
+        ).toList()  ;
     }
 
 }
