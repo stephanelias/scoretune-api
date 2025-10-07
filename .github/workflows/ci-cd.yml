@@ -13,77 +13,17 @@ on:
       - 'main'
 
 jobs:
-  #Step 1
-  feature-build:
-    if: startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/tech/')
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      java-cache: ${{ steps.cache-java.outputs.cache-hit }}
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 21 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
-
-      - name: Build & Test (Feature)
-        run: mvn clean package
-
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: target/*.jar
-
-  develop-build:
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Build & Test (Develop)
-        run: mvn clean verify
-
-      - name: Quality Check
-        run: mvn checkstyle:check spotbugs:check || true
-
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar-develop
-          path: target/*.jar
-
-  deploy-main:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Build & Test (Main)
-        run: mvn clean verify
-
-      - name: Create Release Tag
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          git tag -a v$VERSION -m "Release v$VERSION"
-          git push origin v$VERSION
-
-      - name: Deploy to Fly.io
-        run: |
-          curl -L https://fly.io/install.sh | sh
-          ~/.fly/bin/flyctl deploy --remote-only
+          cache: 'maven'
