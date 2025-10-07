@@ -1,7 +1,6 @@
 package dr.dev.scoretuneapi.core.config;
 
 import dr.dev.scoretuneapi.core.utils.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -35,6 +34,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/users/me").authenticated()
+                        .requestMatchers("/api/users").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

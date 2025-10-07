@@ -3,12 +3,15 @@ package dr.dev.scoretuneapi.core.service;
 import dr.dev.scoretuneapi.core.dto.LoginUserDto;
 import dr.dev.scoretuneapi.core.dto.RegisterUserDto;
 import dr.dev.scoretuneapi.core.exception.UserException;
+import dr.dev.scoretuneapi.user.model.Role;
 import dr.dev.scoretuneapi.user.model.User;
 import dr.dev.scoretuneapi.user.persistence.UserDao;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Service
 public class AuthService {
@@ -32,6 +35,7 @@ public class AuthService {
                 .withEmail(registerUserDto.email())
                 .withPassword(passwordEncoder.encode(registerUserDto.password()))
                 .withFullName(registerUserDto.fullName())
+                .withRoles(Set.of(Role.ROLE_USER))
                 .build();
         return userDao.save(user) ;
     }
