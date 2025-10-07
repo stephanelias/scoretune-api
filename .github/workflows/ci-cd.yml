@@ -11,6 +11,12 @@ on:
     branches:
       - 'develop'
       - 'main'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Type de release (major, minor, patch)"
+        required: false
+        default: "patch"
 
 jobs:
   setup:
@@ -65,7 +71,6 @@ jobs:
 
       - name: Run Unit Tests
         run: mvn test
-
   build:
     needs: [setup, test]
     runs-on: ubuntu-latest
@@ -88,8 +93,58 @@ jobs:
       - name: Build Application JAR
         run: mvn clean package -DskipTests
 
+      - name: Extract Project Version
+        id: extract-version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
           path: target/*.jar
+  release:
+    if: github.ref == 'refs/heads/main' || github.event.inputs.release_type != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Run Maven Release
+        run: |
+          mvn release:prepare -B -DreleaseVersionIncrement=${{ github.event.inputs.release_type || 'patch' }}
+          mvn release:perform -B
+
+      - name: Push Tags
+        run: git push --follow-tags
+  deploy:
+    needs: [ build, release ]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        run: curl -L https://fly.io/install.sh | sh
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          ~/.fly/bin/flyctl deploy --remote-only --build-arg APP_VERSION=${{ needs.build.outputs.version }}
