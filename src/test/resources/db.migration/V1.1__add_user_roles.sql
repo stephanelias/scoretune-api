@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  roles VARCHAR(50) NOT NULL,
+  PRIMARY KEY (user_id, roles)
+);
