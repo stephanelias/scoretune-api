@@ -126,12 +126,35 @@ jobs:
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/stephanelias/scoretune-api.git
 
+      - name: Compute next version
+        id: version
+        run: |
+          CUR=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          BASE=${CUR%-SNAPSHOT}
+          IFS='.' read -r MAJ MIN PAT <<< "$BASE"
+          
+          case "${{ github.event.inputs.release_type }}" in
+          major)
+           MAJ=$((MAJ+1)); MIN=0; PAT=0 ;;
+          minor)
+           MIN=$((MIN+1)); PAT=0 ;;
+          *)
+           PAT=$((PAT+1)) ;;
+          esac
+          
+          echo "release=$MAJ.$MIN.$PAT" >> $GITHUB_ENV
+          echo "next_snapshot=$MAJ.$MIN.$((PAT+1))-SNAPSHOT" >> $GITHUB_ENV
+          
+          echo "Release version: $MAJ.$MIN.$PAT"
+          echo "Next snapshot: $MAJ.$MIN.$((PAT+1))-SNAPSHOT"
+
       - name: Maven Release Prepare
         run: |
           mvn release:prepare -B \
-          -DreleaseVersionIncrement=${{ github.event.inputs.release_type || 'patch' }} \
-          -DpushChanges=true \
-          -DscmCommentPrefix="[skip ci] Release: "
+            -DreleaseVersion=${{ env.release }} \
+            -DdevelopmentVersion=${{ env.next_snapshot }} \
+            -DpushChanges=true \
+            -DscmCommentPrefix="[skip ci] Release: "
 
       - name: Maven Release Perform
         run: mvn release:perform -B -Dmaven.deploy.skip=true
