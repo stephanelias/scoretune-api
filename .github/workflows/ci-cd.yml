@@ -103,7 +103,7 @@ jobs:
           name: app-jar
           path: target/*.jar
   release:
-    if: github.ref == 'refs/heads/main' || github.event.inputs.release_type != ''
+    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -134,7 +134,7 @@ jobs:
           -DscmCommentPrefix="[skip ci] Release: "
 
       - name: Maven Release Perform
-        run: mvn release:perform -B
+        run: mvn release:perform -B -Dmaven.deploy.skip=true
 
       - name: Push Tags
         run: git push --follow-tags
