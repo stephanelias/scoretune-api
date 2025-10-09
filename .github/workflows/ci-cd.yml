@@ -11,79 +11,140 @@ on:
     branches:
       - 'develop'
       - 'main'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Type de release (major, minor, patch)"
+        required: false
+        default: "patch"
 
 jobs:
-  #Step 1
-  feature-build:
-    if: startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/tech/')
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      maven-cache-hit: ${{ steps.cache-maven.outputs.cache-hit }}
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 21 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build & Test (Feature)
-        run: mvn clean package
+      - name: Cache Maven dependencies
+        id: cache-maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-      - name: Upload JAR Artifact
+      - name: Prepare dependencies
+        run: mvn dependency:go-offline
+
+      - name: Upload Maven repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-repo
+          path: ~/.m2/repository
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Maven repository
+        uses: actions/download-artifact@v4
+        with:
+          name: m2-repo
+          path: ~/.m2/repository
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Run Unit Tests
+        run: mvn test
+  build:
+    needs: [setup, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Maven repository
+        uses: actions/download-artifact@v4
+        with:
+          name: m2-repo
+          path: ~/.m2/repository
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build Application JAR
+        run: mvn clean package -DskipTests
+
+      - name: Extract Project Version
+        id: extract-version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
           path: target/*.jar
-
-  develop-build:
-    if: github.ref == 'refs/heads/develop'
+  release:
+    if: github.ref == 'refs/heads/main' || github.event.inputs.release_type != ''
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Java
+      - name: Setup Java 21 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build & Test (Develop)
-        run: mvn clean verify
-
-      - name: Quality Check
-        run: mvn checkstyle:check spotbugs:check || true
-
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar-develop
-          path: target/*.jar
-
-  deploy-main:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Build & Test (Main)
-        run: mvn clean verify
-
-      - name: Create Release Tag
+      - name: Configure Git
         run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          git tag -a v$VERSION -m "Release v$VERSION"
-          git push origin v$VERSION
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Run Maven Release
+        run: |
+          mvn release:prepare -B -DreleaseVersionIncrement=${{ github.event.inputs.release_type || 'patch' }}
+          mvn release:perform -B
+
+      - name: Push Tags
+        run: git push --follow-tags
+  deploy:
+    needs: [ build, release ]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        run: curl -L https://fly.io/install.sh | sh
 
       - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          curl -L https://fly.io/install.sh | sh
-          ~/.fly/bin/flyctl deploy --remote-only
+          ~/.fly/bin/flyctl deploy --remote-only --build-arg APP_VERSION=${{ needs.build.outputs.version }}
