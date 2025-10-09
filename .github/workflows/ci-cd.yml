@@ -124,11 +124,17 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/stephanelias/scoretune-api.git
 
-      - name: Run Maven Release
+      - name: Maven Release Prepare
         run: |
-          mvn release:prepare -B -DreleaseVersionIncrement=${{ github.event.inputs.release_type || 'patch' }}
-          mvn release:perform -B
+          mvn release:prepare -B \
+          -DreleaseVersionIncrement=${{ github.event.inputs.release_type || 'patch' }} \
+          -DpushChanges=true \
+          -DscmCommentPrefix="[skip ci] Release: "
+
+      - name: Maven Release Perform
+        run: mvn release:perform -B
 
       - name: Push Tags
         run: git push --follow-tags
