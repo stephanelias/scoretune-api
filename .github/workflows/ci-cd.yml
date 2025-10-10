@@ -157,7 +157,7 @@ jobs:
             -DscmCommentPrefix="[skip ci] Release: "
 
       - name: Maven Release Perform
-        run: mvn release:perform -B -Dmaven.deploy.skip=true
+        run: mvn release:perform -B -Darguments="-Dmaven.deploy.skip=true"
 
       - name: Push Tags
         run: git push --follow-tags
