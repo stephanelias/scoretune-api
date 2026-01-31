@@ -69,6 +69,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Setup Docker for Testcontainers
+        run: |
+          docker info
+          sudo chmod 666 /var/run/docker.sock
+
       - name: Run Unit Tests
         run: mvn test
   build:
