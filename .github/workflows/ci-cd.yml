@@ -1,12 +1,6 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches:
-      - 'feat/**'
-      - 'tech/**'
-      - 'develop'
-      - 'main'
   pull_request:
     branches:
       - 'develop'
