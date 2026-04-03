@@ -1,0 +1,99 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      maven-cache-hit: ${{ steps.cache-maven.outputs.cache-hit }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache Maven dependencies
+        id: cache-maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Prepare dependencies
+        run: mvn dependency:go-offline
+
+      - name: Upload Maven repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-repo-pr-${{ github.event.pull_request.number }}
+          path: ~/.m2/repository
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Maven repository
+        uses: actions/download-artifact@v4
+        with:
+          name: m2-repo-pr-${{ github.event.pull_request.number }}
+          path: ~/.m2/repository
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Docker for Testcontainers
+        run: |
+          docker info
+          sudo chmod 666 /var/run/docker.sock
+
+      - name: Run Unit Tests
+        run: mvn test
+
+  build:
+    needs: [setup, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Maven repository
+        uses: actions/download-artifact@v4
+        with:
+          name: m2-repo-pr-${{ github.event.pull_request.number }}
+          path: ~/.m2/repository
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build Application JAR
+        run: mvn clean package -DskipTests
+
+      - name: Extract Project Version
+        id: extract-version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar-pr-${{ github.event.pull_request.number }}
+          path: target/*.jar
