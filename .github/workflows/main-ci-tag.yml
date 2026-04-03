@@ -1,16 +1,9 @@
-name: CI/CD Pipeline
+name: Main CI & Auto Tag
 
 on:
-  pull_request:
+  push:
     branches:
-      - 'develop'
-      - 'main'
-  workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Type de release (major, minor, patch)"
-        required: false
-        default: "patch"
+      - main
 
 jobs:
   setup:
@@ -20,6 +13,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java 21 (Temurin)
         uses: actions/setup-java@v4
@@ -42,8 +37,9 @@ jobs:
       - name: Upload Maven repository
         uses: actions/upload-artifact@v4
         with:
-          name: m2-repo
+          name: m2-repo-main
           path: ~/.m2/repository
+
   test:
     needs: setup
     runs-on: ubuntu-latest
@@ -54,7 +50,7 @@ jobs:
       - name: Download Maven repository
         uses: actions/download-artifact@v4
         with:
-          name: m2-repo
+          name: m2-repo-main
           path: ~/.m2/repository
 
       - name: Setup Java 21 (Temurin)
@@ -70,6 +66,7 @@ jobs:
 
       - name: Run Unit Tests
         run: mvn test
+
   build:
     needs: [setup, test]
     runs-on: ubuntu-latest
@@ -80,7 +77,7 @@ jobs:
       - name: Download Maven repository
         uses: actions/download-artifact@v4
         with:
-          name: m2-repo
+          name: m2-repo-main
           path: ~/.m2/repository
 
       - name: Setup Java 21 (Temurin)
@@ -99,11 +96,11 @@ jobs:
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-jar
+          name: app-jar-main
           path: target/*.jar
-  release:
-    if: github.event_name == 'workflow_dispatch'
-    needs: build
+
+  create-tag:
+    needs: [setup, test, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -123,7 +120,39 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/stephanelias/scoretune-api.git
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Detect type from commit message (Conventional Commits)
+        id: detect-type
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Commit message: $COMMIT_MSG"
+          
+          # Extraire le type depuis le format Conventional Commits: feat(...), fix(...), chore(...)
+          if [[ "$COMMIT_MSG" =~ ^(feat|fix|chore)\(.*\) ]]; then
+            BRANCH_PREFIX="${BASH_REMATCH[1]}"
+          elif [[ "$COMMIT_MSG" =~ ^(feat|fix|chore): ]]; then
+            BRANCH_PREFIX="${BASH_REMATCH[1]}"
+          else
+            # Pas de préfixe reconnu = MAJOR
+            BRANCH_PREFIX="none"
+          fi
+          
+          # Déterminer le release_type pour Maven
+          case "$BRANCH_PREFIX" in
+            feat|chore)
+              RELEASE_TYPE="minor"
+              ;;
+            fix)
+              RELEASE_TYPE="patch"
+              ;;
+            *)
+              RELEASE_TYPE="major"
+              ;;
+          esac
+          
+          echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+          echo "🏷️ Detected release type: $RELEASE_TYPE (from branch: $BRANCH_PREFIX)"
 
       - name: Compute next version
         id: version
@@ -132,7 +161,7 @@ jobs:
           BASE=${CUR%-SNAPSHOT}
           IFS='.' read -r MAJ MIN PAT <<< "$BASE"
           
-          case "${{ github.event.inputs.release_type }}" in
+          case "${{ steps.detect-type.outputs.release_type }}" in
           major)
            MAJ=$((MAJ+1)); MIN=0; PAT=0 ;;
           minor)
@@ -144,8 +173,8 @@ jobs:
           echo "release=$MAJ.$MIN.$PAT" >> $GITHUB_ENV
           echo "next_snapshot=$MAJ.$MIN.$((PAT+1))-SNAPSHOT" >> $GITHUB_ENV
           
-          echo "Release version: $MAJ.$MIN.$PAT"
-          echo "Next snapshot: $MAJ.$MIN.$((PAT+1))-SNAPSHOT"
+          echo "📦 Release version: $MAJ.$MIN.$PAT"
+          echo "🔄 Next snapshot: $MAJ.$MIN.$((PAT+1))-SNAPSHOT"
 
       - name: Pull latest changes
         run: git pull --rebase origin main
@@ -163,19 +192,3 @@ jobs:
 
       - name: Push Tags
         run: git push --follow-tags
-  deploy:
-    needs: [ build, release ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Fly.io CLI
-        run: curl -L https://fly.io/install.sh | sh
-
-      - name: Deploy to Fly.io
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          ~/.fly/bin/flyctl deploy --remote-only --build-arg APP_VERSION=${{ needs.build.outputs.version }}
