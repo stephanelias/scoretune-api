@@ -9,7 +9,7 @@
     </parent>
     <groupId>dr.dev</groupId>
     <artifactId>scoretune-api</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.3-SNAPSHOT</version>
     <name>scoretune-api</name>
     <description>scoretune-api</description>
     <url />

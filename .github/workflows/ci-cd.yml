@@ -147,6 +147,9 @@ jobs:
           echo "Release version: $MAJ.$MIN.$PAT"
           echo "Next snapshot: $MAJ.$MIN.$((PAT+1))-SNAPSHOT"
 
+      - name: Pull latest changes
+        run: git pull --rebase origin main
+
       - name: Maven Release Prepare
         run: |
           mvn release:prepare -B \

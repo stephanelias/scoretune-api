@@ -2,7 +2,7 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
-## [1.0.1] - 2026-02-01
+## [1.0.2] - 2026-02-01
 - Améliorations mineures
 
 ## [1.0.0] - 2025-10-09
