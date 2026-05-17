@@ -3,11 +3,15 @@ package dr.dev.scoretuneapi.artist.service;
 import dr.dev.scoretuneapi.artist.model.Artist;
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.persistence.ArtistDao;
+import dr.dev.scoretuneapi.core.dto.PageResponse;
 import dr.dev.scoretuneapi.core.exception.ArtistException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -22,10 +26,22 @@ public class ArtistServiceImpl implements ArtistService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ArtistDto> getAllArtists() {
-        return artistDao.findAll().stream()
-                .map(this::toDto)
-                .toList();
+    public PageResponse<ArtistDto> searchArtists(int page, int size, String search) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("name").ascending());
+
+        Page<Artist> result = (search == null || search.isBlank())
+                ? artistDao.findAll(pageable)
+                : artistDao.findByNameContainingIgnoreCase(search.trim(), pageable);
+
+        return new PageResponse<>(
+                result.getContent().stream().map(this::toDto).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     @Override

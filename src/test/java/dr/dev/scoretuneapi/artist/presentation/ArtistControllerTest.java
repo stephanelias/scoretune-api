@@ -1,10 +1,10 @@
 package dr.dev.scoretuneapi.artist.presentation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dr.dev.scoretuneapi.artist.model.Artist;
 import dr.dev.scoretuneapi.artist.model.ArtistType;
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.service.ArtistService;
+import dr.dev.scoretuneapi.core.dto.PageResponse;
 import dr.dev.scoretuneapi.core.exception.ArtistException;
 import dr.dev.scoretuneapi.core.utils.WithMockCustomUser;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,39 +55,58 @@ class ArtistControllerTest {
     }
 
     @Nested
-    class GetAllArtistsTests {
+    class SearchArtistsTests {
         @Test
-        void givenNoArtists_whenGetAllArtists_thenReturnEmptyList() throws Exception {
-            when(artistService.getAllArtists()).thenReturn(List.of());
+        void givenNoArtists_whenSearchArtists_thenReturnEmptyPage() throws Exception {
+            PageResponse<ArtistDto> emptyPage = new PageResponse<>(List.of(), 0, 10, 0, 0);
+            when(artistService.searchArtists(0, 10, null)).thenReturn(emptyPage);
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isArray())
-                    .andExpect(jsonPath("$.length()").value(0));
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(0))
+                    .andExpect(jsonPath("$.page").value(0))
+                    .andExpect(jsonPath("$.size").value(10))
+                    .andExpect(jsonPath("$.totalElements").value(0))
+                    .andExpect(jsonPath("$.totalPages").value(0));
 
-            verify(artistService).getAllArtists();
+            verify(artistService).searchArtists(0, 10, null);
         }
 
         @Test
-        void givenArtistsExist_whenGetAllArtists_thenReturnListOfArtists() throws Exception {
+        void givenArtistsExist_whenSearchArtists_thenReturnPagedArtists() throws Exception {
             ArtistDto artist1 = new ArtistDto(UUID.randomUUID(), "Artist 1", ArtistType.ARTIST, null);
             ArtistDto artist2 = new ArtistDto(UUID.randomUUID(), "Artist 2", ArtistType.PRODUCER, "photo.jpg");
+            PageResponse<ArtistDto> page = new PageResponse<>(List.of(artist1, artist2), 0, 10, 2, 1);
 
-            when(artistService.getAllArtists()).thenReturn(List.of(artist1, artist2));
+            when(artistService.searchArtists(0, 10, null)).thenReturn(page);
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isArray())
-                    .andExpect(jsonPath("$.length()").value(2))
-                    .andExpect(jsonPath("$[0].name").value("Artist 1"))
-                    .andExpect(jsonPath("$[1].name").value("Artist 2"));
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.content[0].name").value("Artist 1"))
+                    .andExpect(jsonPath("$.content[1].name").value("Artist 2"))
+                    .andExpect(jsonPath("$.totalElements").value(2));
 
-            verify(artistService).getAllArtists();
+            verify(artistService).searchArtists(0, 10, null);
         }
 
         @Test
-        void givenUnauthenticatedUser_whenGetAllArtists_thenReturnOk() throws Exception {
-            when(artistService.getAllArtists()).thenReturn(List.of());
+        void givenSearchQuery_whenSearchArtists_thenPassSearchParam() throws Exception {
+            PageResponse<ArtistDto> page = new PageResponse<>(List.of(testArtistDto), 0, 10, 1, 1);
+            when(artistService.searchArtists(0, 10, "week")).thenReturn(page);
+
+            mockMvc.perform(get("/api/artists").param("search", "week"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].name").value("The Weeknd"));
+
+            verify(artistService).searchArtists(0, 10, "week");
+        }
+
+        @Test
+        void givenUnauthenticatedUser_whenSearchArtists_thenReturnOk() throws Exception {
+            when(artistService.searchArtists(0, 10, null))
+                    .thenReturn(new PageResponse<>(List.of(), 0, 10, 0, 0));
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk());
@@ -457,8 +476,9 @@ class ArtistControllerTest {
     @Nested
     class SecurityTests {
         @Test
-        void givenUnauthenticatedUser_whenGetAllArtists_thenReturnOk() throws Exception {
-            when(artistService.getAllArtists()).thenReturn(List.of());
+        void givenUnauthenticatedUser_whenSearchArtists_thenReturnOk() throws Exception {
+            when(artistService.searchArtists(0, 10, null))
+                    .thenReturn(new PageResponse<>(List.of(), 0, 10, 0, 0));
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk());

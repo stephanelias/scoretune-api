@@ -2,12 +2,12 @@ package dr.dev.scoretuneapi.artist.presentation;
 
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.service.ArtistService;
+import dr.dev.scoretuneapi.core.dto.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RequestMapping("/api/artists")
@@ -21,8 +21,12 @@ public class ArtistController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ArtistDto>> getAllArtists() {
-        List<ArtistDto> artists = artistService.getAllArtists();
+    public ResponseEntity<PageResponse<ArtistDto>> searchArtists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        PageResponse<ArtistDto> artists = artistService.searchArtists(page, size, search);
         return ResponseEntity.ok(artists);
     }
 

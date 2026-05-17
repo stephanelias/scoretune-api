@@ -4,13 +4,18 @@ import dr.dev.scoretuneapi.artist.model.Artist;
 import dr.dev.scoretuneapi.artist.model.ArtistType;
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.persistence.ArtistDao;
+import dr.dev.scoretuneapi.core.dto.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,19 +58,20 @@ class ArtistServiceImplTest {
     }
 
     @Nested
-    class GetAllArtistsTests {
+    class SearchArtistsTests {
         @Test
-        void givenNoArtists_whenGetAllArtists_thenReturnEmptyList() {
-            when(artistDao.findAll()).thenReturn(List.of());
+        void givenNoArtists_whenSearchArtists_thenReturnEmptyPage() {
+            when(artistDao.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
-            List<ArtistDto> result = artistService.getAllArtists();
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, null);
 
-            assertThat(result).isEmpty();
-            verify(artistDao).findAll();
+            assertThat(result.content()).isEmpty();
+            assertThat(result.totalElements()).isZero();
+            verify(artistDao).findAll(any(Pageable.class));
         }
 
         @Test
-        void givenArtistsExist_whenGetAllArtists_thenReturnListOfArtists() {
+        void givenArtistsExist_whenSearchArtists_thenReturnPagedArtists() {
             Artist artist1 = new Artist.Builder()
                     .withId(UUID.randomUUID())
                     .withName("Artist 1")
@@ -76,14 +83,50 @@ class ArtistServiceImplTest {
                     .withType(ArtistType.PRODUCER)
                     .build();
 
-            when(artistDao.findAll()).thenReturn(List.of(artist1, artist2));
+            when(artistDao.findAll(any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(artist1, artist2)));
 
-            List<ArtistDto> result = artistService.getAllArtists();
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, null);
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).name()).isEqualTo("Artist 1");
-            assertThat(result.get(1).name()).isEqualTo("Artist 2");
-            verify(artistDao).findAll();
+            assertThat(result.content()).hasSize(2);
+            assertThat(result.content().get(0).name()).isEqualTo("Artist 1");
+            assertThat(result.content().get(1).name()).isEqualTo("Artist 2");
+            assertThat(result.totalElements()).isEqualTo(2);
+            verify(artistDao).findAll(any(Pageable.class));
+        }
+
+        @Test
+        void givenSearchQuery_whenSearchArtists_thenSearchByName() {
+            when(artistDao.findByNameContainingIgnoreCase(eq("daft"), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(testArtist)));
+
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, "daft");
+
+            assertThat(result.content()).hasSize(1);
+            assertThat(result.content().get(0).name()).isEqualTo("The Weeknd");
+            verify(artistDao).findByNameContainingIgnoreCase(eq("daft"), any(Pageable.class));
+            verify(artistDao, never()).findAll(any(Pageable.class));
+        }
+
+        @Test
+        void givenBlankSearch_whenSearchArtists_thenFindAll() {
+            when(artistDao.findAll(any(Pageable.class))).thenReturn(Page.empty());
+
+            artistService.searchArtists(0, 10, "   ");
+
+            verify(artistDao).findAll(any(Pageable.class));
+            verify(artistDao, never()).findByNameContainingIgnoreCase(any(), any(Pageable.class));
+        }
+
+        @Test
+        void givenInvalidSize_whenSearchArtists_thenClampSize() {
+            when(artistDao.findAll(any(Pageable.class))).thenReturn(Page.empty());
+
+            artistService.searchArtists(0, 0, null);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(artistDao).findAll(pageableCaptor.capture());
+            assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(1);
         }
     }
 

@@ -1,13 +1,13 @@
 package dr.dev.scoretuneapi.artist.service;
 
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
+import dr.dev.scoretuneapi.core.dto.PageResponse;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface ArtistService {
 
-    List<ArtistDto> getAllArtists();
+    PageResponse<ArtistDto> searchArtists(int page, int size, String search);
 
     ArtistDto getArtistById(UUID id);
 
