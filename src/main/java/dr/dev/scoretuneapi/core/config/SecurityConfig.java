@@ -4,6 +4,7 @@ import dr.dev.scoretuneapi.core.utils.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -38,6 +39,10 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/artists/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/artists").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/artists/**").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/artists/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
