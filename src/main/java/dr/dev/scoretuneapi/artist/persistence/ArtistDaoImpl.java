@@ -16,4 +16,8 @@ public interface ArtistDaoImpl extends ArtistDao, JpaRepository<Artist, UUID> {
 
     @Override
     Page<Artist> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
 }

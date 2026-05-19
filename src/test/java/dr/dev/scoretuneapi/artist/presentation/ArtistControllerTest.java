@@ -273,6 +273,24 @@ class ArtistControllerTest {
 
         @Test
         @WithMockUser(roles = "MODO")
+        void givenDuplicateName_whenCreateArtist_thenReturnConflict() throws Exception {
+            ArtistDto inputDto = new ArtistDto(null, "The Weeknd", ArtistType.ARTIST, null);
+
+            when(artistService.createArtist(any(ArtistDto.class)))
+                    .thenThrow(new ArtistException(ArtistException.Code.NAME_ALREADY_EXISTS, null));
+
+            mockMvc.perform(post("/api/artists")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inputDto)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("artist.name-already-exists"))
+                    .andExpect(jsonPath("$.message").value("Un artiste avec ce nom existe déjà"));
+
+            verify(artistService).createArtist(any(ArtistDto.class));
+        }
+
+        @Test
+        @WithMockUser(roles = "MODO")
         void givenNullType_whenCreateArtist_thenReturnBadRequest() throws Exception {
             String jsonBody = "{\"name\": \"Artist Name\", \"type\": null, \"photoLink\": null}";
 

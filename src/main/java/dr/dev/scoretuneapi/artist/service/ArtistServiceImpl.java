@@ -28,7 +28,7 @@ public class ArtistServiceImpl implements ArtistService {
     @Transactional(readOnly = true)
     public PageResponse<ArtistDto> searchArtists(int page, int size, String search) {
         int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), 100);
+        int safeSize = Math.clamp(size, 1, 100);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("name").ascending());
 
         Page<Artist> result = (search == null || search.isBlank())
@@ -54,8 +54,11 @@ public class ArtistServiceImpl implements ArtistService {
 
     @Override
     public ArtistDto createArtist(ArtistDto artistDto) {
+        String name = artistDto.name().trim();
+        assertNameIsAvailable(name, null);
+
         Artist artist = new Artist.Builder()
-                .withName(artistDto.name())
+                .withName(name)
                 .withType(artistDto.type())
                 .withPhotoLink(artistDto.photoLink())
                 .build();
@@ -68,10 +71,13 @@ public class ArtistServiceImpl implements ArtistService {
         if (!artistDao.findById(id).isPresent()) {
             throw new ArtistException(ArtistException.Code.NOT_FOUND, null, "Artist not found with id: " + id);
         }
-        
+
+        String name = artistDto.name().trim();
+        assertNameIsAvailable(name, id);
+
         Artist artist = new Artist.Builder()
                 .withId(id)
-                .withName(artistDto.name())
+                .withName(name)
                 .withType(artistDto.type())
                 .withPhotoLink(artistDto.photoLink())
                 .build();
@@ -86,6 +92,16 @@ public class ArtistServiceImpl implements ArtistService {
             throw new ArtistException(ArtistException.Code.NOT_FOUND, null, "Artist not found with id: " + id);
         }
         artistDao.deleteById(id);
+    }
+
+    private void assertNameIsAvailable(String name, UUID excludeId) {
+        boolean nameTaken = excludeId == null
+                ? artistDao.existsByNameIgnoreCase(name)
+                : artistDao.existsByNameIgnoreCaseAndIdNot(name, excludeId);
+
+        if (nameTaken) {
+            throw new ArtistException(ArtistException.Code.NAME_ALREADY_EXISTS, null);
+        }
     }
 
     private ArtistDto toDto(Artist artist) {

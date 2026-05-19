@@ -5,6 +5,7 @@ import dr.dev.scoretuneapi.artist.model.ArtistType;
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.persistence.ArtistDao;
 import dr.dev.scoretuneapi.core.dto.PageResponse;
+import dr.dev.scoretuneapi.core.exception.ArtistException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -177,6 +178,7 @@ class ArtistServiceImplTest {
                     .withPhotoLink("https://example.com/metro.jpg")
                     .build();
 
+            when(artistDao.existsByNameIgnoreCase("Metro Boomin")).thenReturn(false);
             when(artistDao.save(any(Artist.class))).thenReturn(savedArtist);
 
             ArtistDto result = artistService.createArtist(inputDto);
@@ -205,6 +207,7 @@ class ArtistServiceImplTest {
                     .withPhotoLink(null)
                     .build();
 
+            when(artistDao.existsByNameIgnoreCase("Daft Punk")).thenReturn(false);
             when(artistDao.save(any(Artist.class))).thenReturn(savedArtist);
 
             ArtistDto result = artistService.createArtist(inputDto);
@@ -212,6 +215,19 @@ class ArtistServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.photoLink()).isNull();
             verify(artistDao).save(any(Artist.class));
+        }
+
+        @Test
+        void givenExistingName_whenCreateArtist_thenThrowNameAlreadyExists() {
+            ArtistDto inputDto = new ArtistDto(null, "The Weeknd", ArtistType.ARTIST, null);
+            when(artistDao.existsByNameIgnoreCase("The Weeknd")).thenReturn(true);
+
+            assertThatThrownBy(() -> artistService.createArtist(inputDto))
+                    .isInstanceOf(ArtistException.class)
+                    .satisfies(ex -> assertThat(((ArtistException) ex).code)
+                            .isEqualTo(ArtistException.Code.NAME_ALREADY_EXISTS));
+
+            verify(artistDao, never()).save(any(Artist.class));
         }
     }
 
@@ -240,6 +256,7 @@ class ArtistServiceImplTest {
                     .build();
 
             when(artistDao.findById(testId)).thenReturn(Optional.of(existingArtist));
+            when(artistDao.existsByNameIgnoreCaseAndIdNot("Updated Name", testId)).thenReturn(false);
             when(artistDao.save(any(Artist.class))).thenReturn(updatedArtist);
 
             ArtistDto result = artistService.updateArtist(testId, updateDto);
@@ -276,6 +293,7 @@ class ArtistServiceImplTest {
                     .build();
 
             when(artistDao.findById(testId)).thenReturn(Optional.of(existingArtist));
+            when(artistDao.existsByNameIgnoreCaseAndIdNot("Updated Name", testId)).thenReturn(false);
             when(artistDao.save(any(Artist.class))).thenReturn(updatedArtist);
 
             ArtistDto result = artistService.updateArtist(testId, updateDto);
@@ -284,6 +302,22 @@ class ArtistServiceImplTest {
             assertThat(result.photoLink()).isNull();
             verify(artistDao).findById(testId);
             verify(artistDao).save(any(Artist.class));
+        }
+
+        @Test
+        void givenExistingNameOnAnotherArtist_whenUpdateArtist_thenThrowNameAlreadyExists() {
+            UUID otherId = UUID.randomUUID();
+            ArtistDto updateDto = new ArtistDto(otherId, "The Weeknd", ArtistType.ARTIST, null);
+
+            when(artistDao.findById(otherId)).thenReturn(Optional.of(testArtist));
+            when(artistDao.existsByNameIgnoreCaseAndIdNot("The Weeknd", otherId)).thenReturn(true);
+
+            assertThatThrownBy(() -> artistService.updateArtist(otherId, updateDto))
+                    .isInstanceOf(ArtistException.class)
+                    .satisfies(ex -> assertThat(((ArtistException) ex).code)
+                            .isEqualTo(ArtistException.Code.NAME_ALREADY_EXISTS));
+
+            verify(artistDao, never()).save(any(Artist.class));
         }
 
         @Test

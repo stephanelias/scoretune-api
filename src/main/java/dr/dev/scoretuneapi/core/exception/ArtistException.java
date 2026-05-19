@@ -6,7 +6,12 @@ import org.springframework.http.HttpStatus;
 public class ArtistException extends ApiException {
 
     public enum Code {
-        NOT_FOUND("artist.not-found", HttpStatus.NOT_FOUND, "Artist not found for given id");
+        NOT_FOUND("artist.not-found", HttpStatus.NOT_FOUND, "Artist not found for given id"),
+        NAME_ALREADY_EXISTS(
+                "artist.name-already-exists",
+                HttpStatus.CONFLICT,
+                "Un artiste avec ce nom existe déjà"
+        );
 
         private final String code;
         private final HttpStatus status;
