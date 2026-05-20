@@ -23,7 +23,7 @@ public class ArtistController {
     @GetMapping
     public ResponseEntity<PageResponse<ArtistDto>> searchArtists(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "12") int size,
             @RequestParam(required = false) String search
     ) {
         PageResponse<ArtistDto> artists = artistService.searchArtists(page, size, search);
