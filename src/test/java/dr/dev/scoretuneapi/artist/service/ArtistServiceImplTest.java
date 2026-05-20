@@ -64,7 +64,7 @@ class ArtistServiceImplTest {
         void givenNoArtists_whenSearchArtists_thenReturnEmptyPage() {
             when(artistDao.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
-            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, null);
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 12, null);
 
             assertThat(result.content()).isEmpty();
             assertThat(result.totalElements()).isZero();
@@ -87,7 +87,7 @@ class ArtistServiceImplTest {
             when(artistDao.findAll(any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(artist1, artist2)));
 
-            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, null);
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 12, null);
 
             assertThat(result.content()).hasSize(2);
             assertThat(result.content().get(0).name()).isEqualTo("Artist 1");
@@ -101,7 +101,7 @@ class ArtistServiceImplTest {
             when(artistDao.findByNameContainingIgnoreCase(eq("daft"), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(testArtist)));
 
-            PageResponse<ArtistDto> result = artistService.searchArtists(0, 10, "daft");
+            PageResponse<ArtistDto> result = artistService.searchArtists(0, 12, "daft");
 
             assertThat(result.content()).hasSize(1);
             assertThat(result.content().get(0).name()).isEqualTo("The Weeknd");
@@ -113,7 +113,7 @@ class ArtistServiceImplTest {
         void givenBlankSearch_whenSearchArtists_thenFindAll() {
             when(artistDao.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
-            artistService.searchArtists(0, 10, "   ");
+            artistService.searchArtists(0, 12, "   ");
 
             verify(artistDao).findAll(any(Pageable.class));
             verify(artistDao, never()).findByNameContainingIgnoreCase(any(), any(Pageable.class));

@@ -58,28 +58,28 @@ class ArtistControllerTest {
     class SearchArtistsTests {
         @Test
         void givenNoArtists_whenSearchArtists_thenReturnEmptyPage() throws Exception {
-            PageResponse<ArtistDto> emptyPage = new PageResponse<>(List.of(), 0, 10, 0, 0);
-            when(artistService.searchArtists(0, 10, null)).thenReturn(emptyPage);
+            PageResponse<ArtistDto> emptyPage = new PageResponse<>(List.of(), 0, 12, 0, 0);
+            when(artistService.searchArtists(0, 12, null)).thenReturn(emptyPage);
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.content.length()").value(0))
                     .andExpect(jsonPath("$.page").value(0))
-                    .andExpect(jsonPath("$.size").value(10))
+                    .andExpect(jsonPath("$.size").value(12))
                     .andExpect(jsonPath("$.totalElements").value(0))
                     .andExpect(jsonPath("$.totalPages").value(0));
 
-            verify(artistService).searchArtists(0, 10, null);
+            verify(artistService).searchArtists(0, 12, null);
         }
 
         @Test
         void givenArtistsExist_whenSearchArtists_thenReturnPagedArtists() throws Exception {
             ArtistDto artist1 = new ArtistDto(UUID.randomUUID(), "Artist 1", ArtistType.ARTIST, null);
             ArtistDto artist2 = new ArtistDto(UUID.randomUUID(), "Artist 2", ArtistType.PRODUCER, "photo.jpg");
-            PageResponse<ArtistDto> page = new PageResponse<>(List.of(artist1, artist2), 0, 10, 2, 1);
+            PageResponse<ArtistDto> page = new PageResponse<>(List.of(artist1, artist2), 0, 12, 2, 1);
 
-            when(artistService.searchArtists(0, 10, null)).thenReturn(page);
+            when(artistService.searchArtists(0, 12, null)).thenReturn(page);
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk())
@@ -88,25 +88,25 @@ class ArtistControllerTest {
                     .andExpect(jsonPath("$.content[1].name").value("Artist 2"))
                     .andExpect(jsonPath("$.totalElements").value(2));
 
-            verify(artistService).searchArtists(0, 10, null);
+            verify(artistService).searchArtists(0, 12, null);
         }
 
         @Test
         void givenSearchQuery_whenSearchArtists_thenPassSearchParam() throws Exception {
-            PageResponse<ArtistDto> page = new PageResponse<>(List.of(testArtistDto), 0, 10, 1, 1);
-            when(artistService.searchArtists(0, 10, "week")).thenReturn(page);
+            PageResponse<ArtistDto> page = new PageResponse<>(List.of(testArtistDto), 0, 12, 1, 1);
+            when(artistService.searchArtists(0, 12, "week")).thenReturn(page);
 
             mockMvc.perform(get("/api/artists").param("search", "week"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].name").value("The Weeknd"));
 
-            verify(artistService).searchArtists(0, 10, "week");
+            verify(artistService).searchArtists(0, 12, "week");
         }
 
         @Test
         void givenUnauthenticatedUser_whenSearchArtists_thenReturnOk() throws Exception {
-            when(artistService.searchArtists(0, 10, null))
-                    .thenReturn(new PageResponse<>(List.of(), 0, 10, 0, 0));
+            when(artistService.searchArtists(0, 12, null))
+                    .thenReturn(new PageResponse<>(List.of(), 0, 12, 0, 0));
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk());
@@ -495,8 +495,8 @@ class ArtistControllerTest {
     class SecurityTests {
         @Test
         void givenUnauthenticatedUser_whenSearchArtists_thenReturnOk() throws Exception {
-            when(artistService.searchArtists(0, 10, null))
-                    .thenReturn(new PageResponse<>(List.of(), 0, 10, 0, 0));
+            when(artistService.searchArtists(0, 12, null))
+                    .thenReturn(new PageResponse<>(List.of(), 0, 12, 0, 0));
 
             mockMvc.perform(get("/api/artists"))
                     .andExpect(status().isOk());
