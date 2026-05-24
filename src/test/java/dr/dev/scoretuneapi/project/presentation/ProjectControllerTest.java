@@ -74,7 +74,8 @@ class ProjectControllerTest {
                         ProjectType.SINGLE,
                         ProjectCategory.HIP_HOP_RAP,
                         ProjectZone.FR,
-                        null
+                        null,
+                        List.of()
                 )),
                 0,
                 12,

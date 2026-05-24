@@ -5,6 +5,7 @@ import dr.dev.scoretuneapi.project.model.ProjectType;
 import dr.dev.scoretuneapi.project.model.ProjectZone;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public record ProjectSummaryDto(
@@ -14,6 +15,7 @@ public record ProjectSummaryDto(
         ProjectType type,
         ProjectCategory category,
         ProjectZone zone,
-        String coverLink
+        String coverLink,
+        List<ArtistSummaryDto> artists
 ) {
 }

@@ -15,10 +15,15 @@ import java.util.UUID;
 public interface ProjectDaoImpl extends ProjectDao, JpaRepository<Project, UUID> {
 
     @Override
+    @EntityGraph(attributePaths = {"artists"})
+    Page<Project> findAll(Pageable pageable);
+
+    @Override
     @EntityGraph(attributePaths = {"artists", "tracks"})
     Optional<Project> findDetailedById(UUID id);
 
     @Override
+    @EntityGraph(attributePaths = {"artists"})
     Page<Project> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     @Override

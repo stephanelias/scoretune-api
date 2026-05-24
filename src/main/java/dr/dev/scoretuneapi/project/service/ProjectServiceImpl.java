@@ -246,6 +246,11 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private ProjectSummaryDto toSummaryDto(Project project) {
+        List<ArtistSummaryDto> artists = project.getArtists().stream()
+                .sorted(Comparator.comparing(Artist::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(this::toArtistSummaryDto)
+                .toList();
+
         return new ProjectSummaryDto(
                 project.getId(),
                 project.getName(),
@@ -253,7 +258,8 @@ public class ProjectServiceImpl implements ProjectService {
                 project.getType(),
                 project.getCategory(),
                 project.getZone(),
-                project.getCoverLink()
+                project.getCoverLink(),
+                artists
         );
     }
 
