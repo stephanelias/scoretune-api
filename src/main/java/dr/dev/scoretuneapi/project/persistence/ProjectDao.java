@@ -1,6 +1,7 @@
 package dr.dev.scoretuneapi.project.persistence;
 
 import dr.dev.scoretuneapi.project.model.Project;
+import dr.dev.scoretuneapi.project.model.ProjectType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,6 +18,10 @@ public interface ProjectDao {
     Page<Project> findAll(Pageable pageable);
 
     Page<Project> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    Page<Project> findByArtists_IdAndType(UUID artistId, ProjectType type, Pageable pageable);
+
+    Page<Project> findFeaturingProjectsByArtistId(UUID artistId, Pageable pageable);
 
     boolean existsByNameIgnoreCaseAndReleaseDate(String name, LocalDate releaseDate);
 

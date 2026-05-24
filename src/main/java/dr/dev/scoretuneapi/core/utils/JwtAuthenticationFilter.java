@@ -67,7 +67,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception exception) {
-            filterChain.doFilter(request, response);
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"code\":\"auth.invalid-token\",\"message\":\"Session expirée, veuillez vous reconnecter\"}"
+            );
         }
     }
 }

@@ -3,6 +3,7 @@ package dr.dev.scoretuneapi.project.service;
 import dr.dev.scoretuneapi.artist.model.Artist;
 import dr.dev.scoretuneapi.artist.persistence.ArtistDao;
 import dr.dev.scoretuneapi.core.dto.PageResponse;
+import dr.dev.scoretuneapi.core.exception.ArtistException;
 import dr.dev.scoretuneapi.core.exception.ProjectException;
 import dr.dev.scoretuneapi.project.model.Project;
 import dr.dev.scoretuneapi.project.model.ProjectType;
@@ -60,13 +61,25 @@ public class ProjectServiceImpl implements ProjectService {
                 ? projectDao.findAll(pageable)
                 : projectDao.findByNameContainingIgnoreCase(search.trim(), pageable);
 
-        return new PageResponse<>(
-                result.getContent().stream().map(this::toSummaryDto).toList(),
-                result.getNumber(),
-                result.getSize(),
-                result.getTotalElements(),
-                result.getTotalPages()
-        );
+        return toPageResponse(result);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectSummaryDto> searchProjectsByArtist(UUID artistId, ProjectType type, int page, int size) {
+        requireArtistExists(artistId);
+        Pageable pageable = artistProjectsPageable(page, size);
+        Page<Project> result = projectDao.findByArtists_IdAndType(artistId, type, pageable);
+        return toPageResponse(result);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectSummaryDto> searchAppearancesByArtist(UUID artistId, int page, int size) {
+        requireArtistExists(artistId);
+        Pageable pageable = artistProjectsPageable(page, size);
+        Page<Project> result = projectDao.findFeaturingProjectsByArtistId(artistId, pageable);
+        return toPageResponse(result);
     }
 
     @Override
@@ -243,6 +256,28 @@ public class ProjectServiceImpl implements ProjectService {
 
             project.addTrack(track);
         }
+    }
+
+    private void requireArtistExists(UUID artistId) {
+        if (artistDao.findById(artistId).isEmpty()) {
+            throw new ArtistException(ArtistException.Code.NOT_FOUND, null);
+        }
+    }
+
+    private Pageable artistProjectsPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.clamp(size, 1, 100);
+        return PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "releaseDate"));
+    }
+
+    private PageResponse<ProjectSummaryDto> toPageResponse(Page<Project> result) {
+        return new PageResponse<>(
+                result.getContent().stream().map(this::toSummaryDto).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     private ProjectSummaryDto toSummaryDto(Project project) {
