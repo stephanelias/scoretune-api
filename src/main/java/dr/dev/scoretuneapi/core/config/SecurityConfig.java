@@ -43,6 +43,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/artists").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/artists/**").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/artists/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/projects").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/**").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/projects/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
