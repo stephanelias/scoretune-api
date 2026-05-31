@@ -11,12 +11,14 @@ import dr.dev.scoretuneapi.project.model.Track;
 import dr.dev.scoretuneapi.project.model.TrackArtist;
 import dr.dev.scoretuneapi.project.model.TrackArtistRole;
 import dr.dev.scoretuneapi.project.model.dto.ArtistSummaryDto;
+import dr.dev.scoretuneapi.project.model.dto.ProjectAppearanceDto;
 import dr.dev.scoretuneapi.project.model.dto.ProjectDto;
 import dr.dev.scoretuneapi.project.model.dto.ProjectRequestDto;
 import dr.dev.scoretuneapi.project.model.dto.ProjectSummaryDto;
 import dr.dev.scoretuneapi.project.model.dto.TrackDto;
 import dr.dev.scoretuneapi.project.model.dto.TrackRequestDto;
 import dr.dev.scoretuneapi.project.persistence.ProjectDao;
+import dr.dev.scoretuneapi.project.persistence.TrackDao;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,11 +44,13 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectDao projectDao;
     private final ArtistDao artistDao;
+    private final TrackDao trackDao;
     private final EntityManager entityManager;
 
-    public ProjectServiceImpl(ProjectDao projectDao, ArtistDao artistDao, EntityManager entityManager) {
+    public ProjectServiceImpl(ProjectDao projectDao, ArtistDao artistDao, TrackDao trackDao, EntityManager entityManager) {
         this.projectDao = projectDao;
         this.artistDao = artistDao;
+        this.trackDao = trackDao;
         this.entityManager = entityManager;
     }
 
@@ -75,11 +79,11 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ProjectSummaryDto> searchAppearancesByArtist(UUID artistId, int page, int size) {
+    public PageResponse<ProjectAppearanceDto> searchAppearancesByArtist(UUID artistId, int page, int size) {
         requireArtistExists(artistId);
-        Pageable pageable = artistProjectsPageable(page, size);
-        Page<Project> result = projectDao.findFeaturingProjectsByArtistId(artistId, pageable);
-        return toPageResponse(result);
+        Pageable pageable = artistAppearancesPageable(page, size);
+        Page<Track> result = trackDao.findFeaturingTracksByArtistId(artistId, pageable);
+        return toAppearancePageResponse(result);
     }
 
     @Override
@@ -270,6 +274,12 @@ public class ProjectServiceImpl implements ProjectService {
         return PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "releaseDate"));
     }
 
+    private Pageable artistAppearancesPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.clamp(size, 1, 100);
+        return PageRequest.of(safePage, safeSize);
+    }
+
     private PageResponse<ProjectSummaryDto> toPageResponse(Page<Project> result) {
         return new PageResponse<>(
                 result.getContent().stream().map(this::toSummaryDto).toList(),
@@ -277,6 +287,32 @@ public class ProjectServiceImpl implements ProjectService {
                 result.getSize(),
                 result.getTotalElements(),
                 result.getTotalPages()
+        );
+    }
+
+    private PageResponse<ProjectAppearanceDto> toAppearancePageResponse(Page<Track> result) {
+        return new PageResponse<>(
+                result.getContent().stream().map(this::toAppearanceDto).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
+    }
+
+    private ProjectAppearanceDto toAppearanceDto(Track track) {
+        Project project = track.getProject();
+        TrackDto trackDto = toTrackDto(track);
+
+        return new ProjectAppearanceDto(
+                track.getId(),
+                track.getName(),
+                track.getTrackNumber(),
+                project.getId(),
+                project.getName(),
+                project.getCoverLink(),
+                trackDto.interpreters(),
+                trackDto.featurings()
         );
     }
 

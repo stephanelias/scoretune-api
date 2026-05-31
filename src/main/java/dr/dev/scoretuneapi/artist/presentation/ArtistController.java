@@ -4,6 +4,7 @@ import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.service.ArtistService;
 import dr.dev.scoretuneapi.core.dto.PageResponse;
 import dr.dev.scoretuneapi.project.model.ProjectType;
+import dr.dev.scoretuneapi.project.model.dto.ProjectAppearanceDto;
 import dr.dev.scoretuneapi.project.model.dto.ProjectSummaryDto;
 import dr.dev.scoretuneapi.project.service.ProjectService;
 import jakarta.validation.Valid;
@@ -52,10 +53,10 @@ public class ArtistController {
     }
 
     @GetMapping("/{id}/appearances")
-    public ResponseEntity<PageResponse<ProjectSummaryDto>> getArtistAppearances(
+    public ResponseEntity<PageResponse<ProjectAppearanceDto>> getArtistAppearances(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "24") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(projectService.searchAppearancesByArtist(id, page, size));
     }
