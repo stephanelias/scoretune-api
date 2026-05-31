@@ -7,6 +7,12 @@ import dr.dev.scoretuneapi.artist.service.ArtistService;
 import dr.dev.scoretuneapi.core.dto.PageResponse;
 import dr.dev.scoretuneapi.core.exception.ArtistException;
 import dr.dev.scoretuneapi.core.utils.WithMockCustomUser;
+import dr.dev.scoretuneapi.project.model.ProjectCategory;
+import dr.dev.scoretuneapi.project.model.ProjectType;
+import dr.dev.scoretuneapi.project.model.ProjectZone;
+import dr.dev.scoretuneapi.project.model.dto.ProjectAppearanceDto;
+import dr.dev.scoretuneapi.project.model.dto.ProjectSummaryDto;
+import dr.dev.scoretuneapi.project.service.ProjectService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +43,9 @@ class ArtistControllerTest {
 
     @MockBean
     private ArtistService artistService;
+
+    @MockBean
+    private ProjectService projectService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -147,6 +157,55 @@ class ArtistControllerTest {
 
             mockMvc.perform(get("/api/artists/{id}", testId))
                     .andExpect(status().isOk());
+        }
+    }
+
+    @Nested
+    class GetArtistProjectsTests {
+        @Test
+        void givenUnauthenticatedUser_whenGetArtistProjectsByType_thenReturnOk() throws Exception {
+            ProjectSummaryDto project = new ProjectSummaryDto(
+                    UUID.randomUUID(),
+                    "Drapeau noir",
+                    LocalDate.of(2026, 5, 20),
+                    ProjectType.SINGLE,
+                    ProjectCategory.HIP_HOP_RAP,
+                    ProjectZone.FR,
+                    null,
+                    List.of()
+            );
+            PageResponse<ProjectSummaryDto> page = new PageResponse<>(List.of(project), 0, 24, 1, 1);
+            when(projectService.searchProjectsByArtist(testId, ProjectType.SINGLE, 0, 24)).thenReturn(page);
+
+            mockMvc.perform(get("/api/artists/{id}/projects", testId)
+                            .param("type", "SINGLE"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].name").value("Drapeau noir"));
+
+            verify(projectService).searchProjectsByArtist(testId, ProjectType.SINGLE, 0, 24);
+        }
+
+        @Test
+        void givenUnauthenticatedUser_whenGetArtistAppearances_thenReturnOk() throws Exception {
+            ProjectAppearanceDto appearance = new ProjectAppearanceDto(
+                    UUID.randomUUID(),
+                    "Track 1",
+                    1,
+                    UUID.randomUUID(),
+                    "Drapeau noir",
+                    null,
+                    List.of(),
+                    List.of()
+            );
+            PageResponse<ProjectAppearanceDto> page = new PageResponse<>(List.of(appearance), 0, 10, 1, 1);
+            when(projectService.searchAppearancesByArtist(testId, 0, 10)).thenReturn(page);
+
+            mockMvc.perform(get("/api/artists/{id}/appearances", testId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].trackName").value("Track 1"))
+                    .andExpect(jsonPath("$.content[0].projectName").value("Drapeau noir"));
+
+            verify(projectService).searchAppearancesByArtist(testId, 0, 10);
         }
     }
 

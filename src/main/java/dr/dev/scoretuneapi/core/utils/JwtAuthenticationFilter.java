@@ -32,6 +32,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String method = request.getMethod();
+        String path = resolvePath(request);
+
+        return "OPTIONS".equals(method)
+                || path.startsWith("/api/auth/")
+                || ("GET".equals(method) && (path.startsWith("/api/artists") || path.startsWith("/api/projects")));
+    }
+
+    private String resolvePath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
+            return uri.substring(contextPath.length());
+        }
+        return uri;
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
@@ -67,7 +86,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception exception) {
-            filterChain.doFilter(request, response);
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"code\":\"auth.invalid-token\",\"message\":\"Session expirée, veuillez vous reconnecter\"}"
+            );
         }
     }
 }

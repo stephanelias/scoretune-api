@@ -3,6 +3,10 @@ package dr.dev.scoretuneapi.artist.presentation;
 import dr.dev.scoretuneapi.artist.model.dto.ArtistDto;
 import dr.dev.scoretuneapi.artist.service.ArtistService;
 import dr.dev.scoretuneapi.core.dto.PageResponse;
+import dr.dev.scoretuneapi.project.model.ProjectType;
+import dr.dev.scoretuneapi.project.model.dto.ProjectAppearanceDto;
+import dr.dev.scoretuneapi.project.model.dto.ProjectSummaryDto;
+import dr.dev.scoretuneapi.project.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +19,11 @@ import java.util.UUID;
 public class ArtistController {
 
     private final ArtistService artistService;
+    private final ProjectService projectService;
 
-    public ArtistController(ArtistService artistService) {
+    public ArtistController(ArtistService artistService, ProjectService projectService) {
         this.artistService = artistService;
+        this.projectService = projectService;
     }
 
     @GetMapping
@@ -34,6 +40,25 @@ public class ArtistController {
     public ResponseEntity<ArtistDto> getArtistById(@PathVariable UUID id) {
         ArtistDto artist = artistService.getArtistById(id);
         return ResponseEntity.ok(artist);
+    }
+
+    @GetMapping("/{id}/projects")
+    public ResponseEntity<PageResponse<ProjectSummaryDto>> getArtistProjects(
+            @PathVariable UUID id,
+            @RequestParam ProjectType type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "24") int size
+    ) {
+        return ResponseEntity.ok(projectService.searchProjectsByArtist(id, type, page, size));
+    }
+
+    @GetMapping("/{id}/appearances")
+    public ResponseEntity<PageResponse<ProjectAppearanceDto>> getArtistAppearances(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(projectService.searchAppearancesByArtist(id, page, size));
     }
 
     @PostMapping

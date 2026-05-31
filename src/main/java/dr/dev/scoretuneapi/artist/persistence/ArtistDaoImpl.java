@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +15,9 @@ import java.util.UUID;
 public interface ArtistDaoImpl extends ArtistDao, JpaRepository<Artist, UUID> {
     @Override
     Optional<Artist> findById(UUID id);
+
+    @Override
+    List<Artist> findAllByIdIn(Collection<UUID> ids);
 
     @Override
     Page<Artist> findByNameContainingIgnoreCase(String name, Pageable pageable);

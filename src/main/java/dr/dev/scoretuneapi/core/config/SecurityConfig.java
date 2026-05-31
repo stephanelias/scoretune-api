@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
@@ -43,6 +44,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/artists").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/artists/**").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/artists/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/projects/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/projects").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/**").hasAnyRole("MODO", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/projects/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
