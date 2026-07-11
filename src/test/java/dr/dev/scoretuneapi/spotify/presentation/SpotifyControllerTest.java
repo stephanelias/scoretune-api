@@ -2,6 +2,7 @@ package dr.dev.scoretuneapi.spotify.presentation;
 
 import dr.dev.scoretuneapi.core.exception.SpotifyException;
 import dr.dev.scoretuneapi.spotify.model.dto.SpotifyArtistPhotoDto;
+import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectCoverDto;
 import dr.dev.scoretuneapi.spotify.service.SpotifyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,5 +65,44 @@ class SpotifyControllerTest {
         mockMvc.perform(get("/api/spotify/artist/photo").param("name", "Unknown Artist"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("spotify.artist-not-found"));
+    }
+
+    @Test
+    @WithMockUser(roles = "MODO")
+    void givenModoUser_whenGetProjectCover_thenReturnCoverUrl() throws Exception {
+        when(spotifyService.getProjectCover("Drapeau noir", null))
+                .thenReturn(new SpotifyProjectCoverDto("https://i.scdn.co/image/cover.jpg"));
+
+        mockMvc.perform(get("/api/spotify/project/cover").param("name", "Drapeau noir"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverUrl").value("https://i.scdn.co/image/cover.jpg"));
+
+        verify(spotifyService).getProjectCover("Drapeau noir", null);
+    }
+
+    @Test
+    @WithMockUser(roles = "MODO")
+    void givenModoUser_whenGetProjectCoverWithArtists_thenReturnCoverUrl() throws Exception {
+        when(spotifyService.getProjectCover("NFL", List.of("Vald")))
+                .thenReturn(new SpotifyProjectCoverDto("https://i.scdn.co/image/cover.jpg"));
+
+        mockMvc.perform(get("/api/spotify/project/cover")
+                        .param("name", "NFL")
+                        .param("artists", "Vald"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverUrl").value("https://i.scdn.co/image/cover.jpg"));
+
+        verify(spotifyService).getProjectCover("NFL", List.of("Vald"));
+    }
+
+    @Test
+    @WithMockUser(roles = "MODO")
+    void givenProjectNotFound_whenGetProjectCover_thenReturnNotFound() throws Exception {
+        when(spotifyService.getProjectCover("Unknown Project", null))
+                .thenThrow(new SpotifyException(SpotifyException.Code.PROJECT_NOT_FOUND, null));
+
+        mockMvc.perform(get("/api/spotify/project/cover").param("name", "Unknown Project"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("spotify.project-not-found"));
     }
 }
