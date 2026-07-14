@@ -13,6 +13,7 @@ public record SpotifySearchAlbumsResponse(
     }
 
     public record AlbumItem(
+            String id,
             @JsonProperty("album_type") String albumType,
             @JsonProperty("total_tracks") Integer totalTracks,
             List<Image> images

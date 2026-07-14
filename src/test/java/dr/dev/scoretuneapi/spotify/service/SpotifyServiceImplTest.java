@@ -72,4 +72,16 @@ class SpotifyServiceImplTest {
                 .extracting("code")
                 .isEqualTo(SpotifyException.Code.NAME_REQUIRED);
     }
+
+    @Test
+    void givenProjectName_whenGetProjectTracklist_thenReturnTracks() {
+        when(spotifyConnector.findProjectTracklist("Drip Harder", List.of("Lil Baby")))
+                .thenReturn(List.of("Drip Too Hard", "Never Needed No Help"));
+
+        var result = spotifyService.getProjectTracklist("Drip Harder", List.of("Lil Baby"));
+
+        assertThat(result.tracks()).hasSize(2);
+        assertThat(result.tracks().getFirst().name()).isEqualTo("Drip Too Hard");
+        verify(spotifyConnector).findProjectTracklist("Drip Harder", List.of("Lil Baby"));
+    }
 }
