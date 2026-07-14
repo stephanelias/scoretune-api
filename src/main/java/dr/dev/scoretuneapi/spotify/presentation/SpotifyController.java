@@ -2,6 +2,7 @@ package dr.dev.scoretuneapi.spotify.presentation;
 
 import dr.dev.scoretuneapi.spotify.model.dto.SpotifyArtistPhotoDto;
 import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectCoverDto;
+import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectTracklistDto;
 import dr.dev.scoretuneapi.spotify.service.SpotifyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,5 +33,13 @@ public class SpotifyController {
             @RequestParam(required = false) List<String> artists
     ) {
         return ResponseEntity.ok(spotifyService.getProjectCover(name, artists));
+    }
+
+    @GetMapping("/project/tracklist")
+    public ResponseEntity<SpotifyProjectTracklistDto> getProjectTracklist(
+            @RequestParam String name,
+            @RequestParam(required = false) List<String> artists
+    ) {
+        return ResponseEntity.ok(spotifyService.getProjectTracklist(name, artists));
     }
 }

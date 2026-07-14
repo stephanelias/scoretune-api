@@ -3,6 +3,8 @@ package dr.dev.scoretuneapi.spotify.presentation;
 import dr.dev.scoretuneapi.core.exception.SpotifyException;
 import dr.dev.scoretuneapi.spotify.model.dto.SpotifyArtistPhotoDto;
 import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectCoverDto;
+import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectTrackDto;
+import dr.dev.scoretuneapi.spotify.model.dto.SpotifyProjectTracklistDto;
 import dr.dev.scoretuneapi.spotify.service.SpotifyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,5 +106,25 @@ class SpotifyControllerTest {
         mockMvc.perform(get("/api/spotify/project/cover").param("name", "Unknown Project"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("spotify.project-not-found"));
+    }
+
+    @Test
+    @WithMockUser(roles = "MODO")
+    void givenModoUser_whenGetProjectTracklist_thenReturnTracks() throws Exception {
+        when(spotifyService.getProjectTracklist("Drip Harder", List.of("Lil Baby", "Gunna")))
+                .thenReturn(new SpotifyProjectTracklistDto(List.of(
+                        new SpotifyProjectTrackDto("Drip Too Hard"),
+                        new SpotifyProjectTrackDto("Never Needed No Help")
+                )));
+
+        mockMvc.perform(get("/api/spotify/project/tracklist")
+                        .param("name", "Drip Harder")
+                        .param("artists", "Lil Baby")
+                        .param("artists", "Gunna"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tracks[0].name").value("Drip Too Hard"))
+                .andExpect(jsonPath("$.tracks[1].name").value("Never Needed No Help"));
+
+        verify(spotifyService).getProjectTracklist("Drip Harder", List.of("Lil Baby", "Gunna"));
     }
 }

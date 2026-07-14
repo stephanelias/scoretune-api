@@ -2,6 +2,7 @@ package dr.dev.scoretuneapi.spotify.connector;
 
 import dr.dev.scoretuneapi.core.exception.SpotifyException;
 import dr.dev.scoretuneapi.spotify.config.SpotifyProperties;
+import dr.dev.scoretuneapi.spotify.connector.dto.SpotifyAlbumTracksResponse;
 import dr.dev.scoretuneapi.spotify.connector.dto.SpotifySearchAlbumsResponse;
 import dr.dev.scoretuneapi.spotify.connector.dto.SpotifySearchArtistsResponse;
 import dr.dev.scoretuneapi.spotify.connector.dto.SpotifyTokenResponse;
@@ -120,6 +121,59 @@ public class SpotifyConnector {
         }
     }
 
+    public List<String> findProjectTracklist(String projectName, List<String> artistNames) {
+        if (!properties.isConfigured()) {
+            log.warn("Spotify integration is not configured");
+            throw new SpotifyException(SpotifyException.Code.NOT_CONFIGURED, null);
+        }
+
+        String query = SpotifySearchQuery.album(projectName, artistNames);
+
+        try {
+            ensureAccessToken();
+
+            log.debug("Spotify search request: GET /search?q={}&type=album&limit=1", query);
+
+            SpotifySearchAlbumsResponse searchResponse = spotifyApiRestClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/search")
+                            .queryParam("q", query)
+                            .queryParam("type", "album")
+                            .queryParam("limit", 1)
+                            .build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(SpotifySearchAlbumsResponse.class);
+
+            String albumId = extractAlbumId(searchResponse, query);
+
+            log.debug("Spotify album tracks request: GET /albums/{}/tracks", albumId);
+
+            SpotifyAlbumTracksResponse tracksResponse = spotifyApiRestClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/albums/{id}/tracks")
+                            .queryParam("limit", 50)
+                            .build(albumId))
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(SpotifyAlbumTracksResponse.class);
+
+            List<String> trackNames = extractTrackNames(tracksResponse);
+            log.debug("Spotify project tracklist found for q={}, tracks={}", query, trackNames.size());
+            return trackNames;
+        } catch (SpotifyException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            log.error("Spotify API request failed for project tracklist q={}", query, exception);
+            throw new SpotifyException(
+                    SpotifyException.Code.API_ERROR,
+                    null,
+                    "Spotify API request failed",
+                    exception
+            );
+        }
+    }
+
     private void ensureAccessToken() {
         if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
             return;
@@ -208,6 +262,43 @@ public class SpotifyConnector {
                 "No cover available for this project",
                 "Spotify project cover not available for q=" + query
         );
+    }
+
+    private String extractAlbumId(SpotifySearchAlbumsResponse response, String query) {
+        if (response == null
+                || response.albums() == null
+                || response.albums().items() == null
+                || response.albums().items().isEmpty()) {
+            log.warn("Spotify project not found for q={}", query);
+            throw new SpotifyException(SpotifyException.Code.PROJECT_NOT_FOUND, null);
+        }
+
+        String albumId = response.albums().items().getFirst().id();
+        if (albumId == null || albumId.isBlank()) {
+            log.warn("Spotify album id missing for q={}", query);
+            throw new SpotifyException(SpotifyException.Code.PROJECT_NOT_FOUND, null);
+        }
+
+        return albumId;
+    }
+
+    private List<String> extractTrackNames(SpotifyAlbumTracksResponse response) {
+        if (response == null || response.items() == null || response.items().isEmpty()) {
+            log.warn("Spotify album has no tracks");
+            throw new SpotifyException(SpotifyException.Code.PROJECT_NOT_FOUND, null, "No tracks found on Spotify");
+        }
+
+        List<String> trackNames = response.items().stream()
+                .map(SpotifyAlbumTracksResponse.TrackItem::name)
+                .filter(name -> name != null && !name.isBlank())
+                .toList();
+
+        if (trackNames.isEmpty()) {
+            log.warn("Spotify album tracks have no names");
+            throw new SpotifyException(SpotifyException.Code.PROJECT_NOT_FOUND, null, "No tracks found on Spotify");
+        }
+
+        return trackNames;
     }
 
     private String extractFirstImageUrl(
