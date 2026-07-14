@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/projects").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/**").hasAnyRole("MODO", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/projects/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/spotify/**").hasAnyRole("MODO", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
